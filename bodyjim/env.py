@@ -1,6 +1,5 @@
 import asyncio
-from collections.abc import Mapping
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Optional, Tuple, Mapping
 
 import gymnasium as gym
 from gymnasium import spaces
@@ -14,7 +13,7 @@ from bodyjim.schema import space_from_schema
 TICI_IMAGE_SIZE = (1208, 1928)
 
 
-def update_obs_recursive(obs: Dict[str, Any], new_obs: Dict[str, Any]):
+def update_obs_recursive(obs, new_obs):
   for key, value in new_obs.items():
     if isinstance(value, Mapping):
       obs[key] = update_obs_recursive(obs.get(key, {}), value)
@@ -53,7 +52,7 @@ class BodyEnv(gym.Env):
     })
     self.action_space = spaces.Box(low=-1.0, high=1.0, shape=(2,), dtype=np.float32)
 
-    assert render_mode is None or render_mode in self.metadata["render_modes"]
+    assert render_mode is None or render_mode in self.metadata["render_modes"] # type: ignore
     self.render_mode = render_mode
 
   def _initialize_data_stream(self):
@@ -63,6 +62,7 @@ class BodyEnv(gym.Env):
     self._data_stream.start()
 
   def _get_observation_and_info(self) -> ObsType:
+    assert self._data_stream is not None
     frames, messages, valid, times = self._data_stream.receive()
     if self._last_observation is None:
       new_obs = self.observation_space.sample()
@@ -89,6 +89,7 @@ class BodyEnv(gym.Env):
     if self._data_stream is None:
       self._initialize_data_stream()
 
+    assert self._data_stream is not None
     x, y = action
     self._data_stream.send(x, y)
     obs, info = self._get_observation_and_info()

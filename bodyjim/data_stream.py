@@ -53,17 +53,17 @@ class DataStreamSession:
     self._client = client
     self._runner = asyncio.Runner()
 
-    self._camera_tracks = None
-    self._channel = None
+    self._camera_tracks: Dict[str, aiortc.MediaStreamTrack] = {}
+    self._channel: Optional[aiortc.RTCDataChannel] = None
     self._message_schema: Optional[Dict[str, Any]] = None
 
     self._cameras = cameras
     self._requested_services = services
-    self._message_storage = {service: None for service in services}
-    self._message_log_mono_times = {service: None for service in services}
-    self._message_validity = {service: False for service in services}
-    self._message_recv_times = {service: 0 for service in services}
-    self._last_recv_time = 0
+    self._message_storage: Dict[str, Optional[Any]] = {service: None for service in services}
+    self._message_log_mono_times: Dict[str, Optional[int]] = {service: None for service in services}
+    self._message_validity: Dict[str, Optional[bool]] = {service: False for service in services}
+    self._message_recv_times: Dict[str, Optional[float]] = {service: 0 for service in services}
+    self._last_recv_time = 0.0
 
   @property
   def last_recv_time(self) -> float:
@@ -79,29 +79,31 @@ class DataStreamSession:
   def stop(self):
     self._runner.run(self._disconnect_async())
 
-  def receive(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, bool], Dict[str, int]]:
+  def receive(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, Optional[bool]], Dict[str, Optional[int]]]:
     return self._runner.run(self._receive_async())
-  
+
   def send(self, x: float, y: float):
+    assert self._channel is not None
     msg = {"type": "testJoystick", "data": {"axes": [x, y], "buttons": [False]}}
     data = json.dumps(msg).encode()
     self._channel.send(data)
 
   async def _connect_async(self):
-    with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
+    async with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
       await self._stream.start()
       await self._stream.wait_for_connection()
       self._camera_tracks = {cam: self._stream.get_incoming_video_track(cam, buffered=False) for cam in self._cameras}
       self._channel = self._stream.get_messaging_channel()
 
   async def _disconnect_async(self):
-    with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
+    async with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
       await self._stream.stop()
 
-  async def _receive_async(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, bool], Dict[str, int]]:
-    with asyncio.timeout(RECEIVE_TIMEOUT_SECONDS):
+  async def _receive_async(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, Optional[bool]], Dict[str, Optional[int]]]:
+    async with asyncio.timeout(RECEIVE_TIMEOUT_SECONDS):
       camera_coroutines: List[Awaitable[np.array]] = []
       for cam in self._cameras:
+        assert cam in self._camera_tracks
         cor = self._camera_tracks[cam].recv()
         camera_coroutines.append(cor)
 

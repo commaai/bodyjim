@@ -10,6 +10,8 @@ import pygame
 from bodyjim.data_stream import DataStreamSession, WebrtcdClient
 from bodyjim.schema import space_from_schema
 
+TICI_IMAGE_SIZE = (1208, 1928)
+
 
 class BodyEnv(gym.Env):
   metadata = {"render_modes": ["human", "rgb_array"], "render_fps": 20}
@@ -32,7 +34,7 @@ class BodyEnv(gym.Env):
 
     self.observation_space = spaces.Dict({
       "cameras": spaces.Dict({
-        cam: spaces.Box(low=0, high=255, shape=(1928, 1208, 3), dtype=np.uint8) for cam in cameras
+        cam: spaces.Box(low=0, high=255, shape=(*TICI_IMAGE_SIZE, 3), dtype=np.uint8) for cam in cameras
       }),
       **space_from_schema(schema)
     })
@@ -57,7 +59,7 @@ class BodyEnv(gym.Env):
     info = {"timestamps": times, "valid": valid}
     new_obs.update({
       "cameras": frames,
-      **{service: messages[service] for service in self._services}
+      **{service: messages[service] for service in self._services if service in messages}
     })
 
     return new_obs, info
@@ -91,7 +93,7 @@ class BodyEnv(gym.Env):
     if self._data_stream is None or (options is not None and options.get("reconnect", False)):
       self._initialize_data_stream()
 
-    obs, info = self._get_observation()
+    obs, info = self._get_observation_and_info()
 
     self._last_observation = obs
     self._last_info = info

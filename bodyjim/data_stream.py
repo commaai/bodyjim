@@ -9,6 +9,9 @@ import numpy as np
 
 from teleoprtc import WebRTCOfferBuilder
 
+CONNECT_TIMEOUT_SECONDS = 3.0
+RECEIVE_TIMEOUT_SECONDS = 0.2
+
 
 class WebrtcdClient:
   def __init__(self, address: str, port: int = 5001):
@@ -85,29 +88,32 @@ class DataStreamSession:
     self._channel.send(data)
 
   async def _connect_async(self):
-    await self._stream.start()
-    await self._stream.wait_for_connection()
-    self._camera_tracks = {cam: self._stream.get_incoming_video_track(cam, buffered=False) for cam in self._cameras}
-    self._channel = self._stream.get_messaging_channel()
+    with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
+      await self._stream.start()
+      await self._stream.wait_for_connection()
+      self._camera_tracks = {cam: self._stream.get_incoming_video_track(cam, buffered=False) for cam in self._cameras}
+      self._channel = self._stream.get_messaging_channel()
 
   async def _disconnect_async(self):
-    await self._stream.stop()
+    with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
+      await self._stream.stop()
 
   async def _receive_async(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, bool], Dict[str, int]]:
-    camera_coroutines: List[Awaitable[np.array]] = []
-    for cam in self._cameras:
-      cor = self._camera_tracks[cam].recv()
-      camera_coroutines.append(cor)
+    with asyncio.timeout(RECEIVE_TIMEOUT_SECONDS):
+      camera_coroutines: List[Awaitable[np.array]] = []
+      for cam in self._cameras:
+        cor = self._camera_tracks[cam].recv()
+        camera_coroutines.append(cor)
 
-    frames = await asyncio.gather(*camera_coroutines)
-    self._last_recv_time = time.time()
+      frames = await asyncio.gather(*camera_coroutines)
+      self._last_recv_time = time.time()
 
-    return (
-      {cam: frame.to_ndarray(format="rgb24") for cam, frame in zip(self._cameras, frames)},
-      {service: self._message_storage[service] for service in self._requested_services},
-      {service: self._message_validity[service] for service in self._requested_services},
-      {service: self._message_log_mono_times[service] for service in self._requested_services},
-    )
+      return (
+        {cam: frame.to_ndarray(format="rgb24") for cam, frame in zip(self._cameras, frames)},
+        {service: self._message_storage[service] for service in self._requested_services},
+        {service: self._message_validity[service] for service in self._requested_services},
+        {service: self._message_log_mono_times[service] for service in self._requested_services},
+      )
 
   async def _new_message_handler(self, data: bytes):
     msg = json.loads(data)

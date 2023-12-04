@@ -1,4 +1,5 @@
 import asyncio
+from collections.abc import Mapping
 from typing import Any, Dict, List, Optional, Tuple
 
 import gymnasium as gym
@@ -11,6 +12,18 @@ from bodyjim.data_stream import DataStreamSession, WebrtcdClient
 from bodyjim.schema import space_from_schema
 
 TICI_IMAGE_SIZE = (1208, 1928)
+
+
+def update_obs_recursive(obs: Dict[str, Any], new_obs: Dict[str, Any]):
+  for key, value in new_obs.items():
+    if isinstance(value, Mapping):
+      obs[key] = update_obs_recursive(obs.get(key, {}), value)
+    elif isinstance(value, List): # convert all lists to tuples
+      obs[key] = tuple(value)
+    else:
+      obs[key] = value
+
+  return obs
 
 
 class BodyEnv(gym.Env):
@@ -57,7 +70,7 @@ class BodyEnv(gym.Env):
       new_obs = self._last_observation.copy()
 
     info = {"timestamps": times, "valid": valid}
-    new_obs.update({
+    update_obs_recursive(new_obs, {
       "cameras": frames,
       **{service: messages[service] for service in self._services if service in messages}
     })

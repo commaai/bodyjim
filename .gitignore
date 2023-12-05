@@ -1,5 +1,5 @@
-# onnx
-yolov5n_flat.onnx
+# model files
+*.onnx
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

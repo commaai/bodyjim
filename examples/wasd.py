@@ -45,6 +45,7 @@ def run_wasd(body_ip, cameras):
     print("Acceleration:", obs["accelerometer"]["acceleration"]["v"], "updated at", info["timestamps"]["accelerometer"])
     print("Gyroscope:", obs["gyroscope"]["gyro"]["v"], "updated at", info["timestamps"]["gyroscope"])
     print("GPS: latitude", obs["gpsLocation"]["latitude"], "longitude", obs["gpsLocation"]["longitude"], "updated at", info["timestamps"]["gpsLocation"])
+    print("\n" + "=" * 40 + "\n")
 
 
 if __name__ == "__main__":

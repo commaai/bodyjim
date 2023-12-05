@@ -121,6 +121,14 @@ class TestEnv(unittest.TestCase):
       obs, _, _, _, _ = env.step((0.0, 0.0))
       self.assertTrue(env.observation_space.contains(obs))
 
+  def test_none_msg(self):
+    msg = {'message_a': None}
+    with MockedDataStreamSession(self.mocked_data_stream(self.cameras, msg), self.mocked_schema_client(self.schema)):
+      env = BodyEnv('localhost', self.cameras, self.services)
+      obs, _, _, _, _ = env.step((0.0, 0.0))
+      self.assertTrue(env.observation_space.contains(obs))
+      self.assertFalse(obs['message_a'] is None)
+
 
 if __name__ == '__main__':
   unittest.main()

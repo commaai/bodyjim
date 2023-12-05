@@ -72,7 +72,7 @@ class BodyEnv(gym.Env):
     info = {"timestamps": times, "valid": valid}
     update_obs_recursive(new_obs, {
       "cameras": frames,
-      **{service: messages[service] for service in self._services if service in messages}
+      **{service: messages[service] for service in self._services if service in messages and messages[service] is not None}
     })
 
     return new_obs, info

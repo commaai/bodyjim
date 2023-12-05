@@ -1,3 +1,6 @@
+# onnx
+yolov5n_flat.onnx
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

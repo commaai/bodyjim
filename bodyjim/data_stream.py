@@ -102,7 +102,7 @@ class DataStreamSession:
     return future.result(RECEIVE_TIMEOUT_SECONDS)
 
   def send(self, x: float, y: float):
-    assert self._channel is not None
+    assert self._channel is not None and self._event_loop is not None, "Session not started"
     msg = {"type": "testJoystick", "data": {"axes": [x, y], "buttons": [False]}}
     data = json.dumps(msg).encode()
     self._event_loop.call_soon_threadsafe(self._channel.send, data)

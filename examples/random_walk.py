@@ -18,8 +18,9 @@ def run_random_walk(body_ip, cameras):
         env.close()
         return
 
+    # sample from action space and perform a step
     action = env.action_space.sample()
-    _, _, _, _, _ = env.step(action)
+    _, _, _, _, _ = env.step(action) # obs, reward, done, _, info
 
 
 if __name__=="__main__":

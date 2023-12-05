@@ -1,6 +1,7 @@
 import asyncio
 import json
 import time
+import threading
 from typing import Any, Awaitable, Dict, List, Tuple, Optional
 
 import aiohttp
@@ -51,7 +52,8 @@ class DataStreamSession:
     self._stream = builder.stream()
     self._stream.set_message_handler(self._new_message_handler)
     self._client = client
-    self._runner = asyncio.Runner()
+    self._event_loop: Optional[asyncio.AbstractEventLoop] = None
+    self._runner_thread: Optional[threading.Thread] = None
 
     self._camera_tracks: Dict[str, aiortc.MediaStreamTrack] = {}
     self._channel: Optional[aiortc.RTCDataChannel] = None
@@ -61,8 +63,8 @@ class DataStreamSession:
     self._requested_services = services
     self._message_storage: Dict[str, Optional[Any]] = {service: None for service in services}
     self._message_log_mono_times: Dict[str, Optional[int]] = {service: None for service in services}
-    self._message_validity: Dict[str, Optional[bool]] = {service: False for service in services}
-    self._message_recv_times: Dict[str, Optional[float]] = {service: 0 for service in services}
+    self._message_validity: Dict[str, bool] = {service: False for service in services}
+    self._message_recv_times: Dict[str, float] = {service: 0.0 for service in services}
     self._last_recv_time = 0.0
 
   @property
@@ -74,13 +76,29 @@ class DataStreamSession:
     return self._message_schema
 
   def start(self):
-    self._runner.run(self._connect_async())
+    def _background_loop_run(loop):
+      asyncio.set_event_loop(loop)
+      loop.run_forever()
+    
+    self._event_loop = asyncio.new_event_loop()
+    self._runner_thread = threading.Thread(target=_background_loop_run, args=(self._event_loop,), daemon=True)
+    self._runner_thread.start()
+    future = asyncio.run_coroutine_threadsafe(self._connect_async(), self._event_loop)
+    future.result(CONNECT_TIMEOUT_SECONDS)
 
   def stop(self):
-    self._runner.run(self._disconnect_async())
+    assert self._event_loop is not None, "Session not started"
+    future = asyncio.run_coroutine_threadsafe(self._disconnect_async(), self._event_loop)
+    future.result(CONNECT_TIMEOUT_SECONDS)
+    self._event_loop.stop()
+    self._event_loop.close()
+    self._runner_thread.join()
+    self._runner_thread = None
 
   def receive(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, Optional[bool]], Dict[str, Optional[int]]]:
-    return self._runner.run(self._receive_async())
+    assert self._event_loop is not None, "Session not started"
+    future = asyncio.run_coroutine_threadsafe(self._receive_async(), self._event_loop)
+    return future.result(RECEIVE_TIMEOUT_SECONDS)
 
   def send(self, x: float, y: float):
     assert self._channel is not None
@@ -89,39 +107,39 @@ class DataStreamSession:
     self._channel.send(data)
 
   async def _connect_async(self):
-    async with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
-      await self._stream.start()
-      await self._stream.wait_for_connection()
-      self._camera_tracks = {cam: self._stream.get_incoming_video_track(cam, buffered=False) for cam in self._cameras}
-      self._channel = self._stream.get_messaging_channel()
+    await self._stream.start()
+    await self._stream.wait_for_connection()
+    self._camera_tracks = {cam: self._stream.get_incoming_video_track(cam, buffered=False) for cam in self._cameras}
+    self._channel = self._stream.get_messaging_channel()
 
   async def _disconnect_async(self):
-    async with asyncio.timeout(CONNECT_TIMEOUT_SECONDS):
-      await self._stream.stop()
+    await self._stream.stop()
 
   async def _receive_async(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, Optional[bool]], Dict[str, Optional[int]]]:
-    async with asyncio.timeout(RECEIVE_TIMEOUT_SECONDS):
-      camera_coroutines: List[Awaitable[np.array]] = []
-      for cam in self._cameras:
-        assert cam in self._camera_tracks
-        cor = self._camera_tracks[cam].recv()
-        camera_coroutines.append(cor)
+    camera_coroutines: List[Awaitable[np.array]] = []
+    for cam in self._cameras:
+      assert cam in self._camera_tracks
+      cor = self._camera_tracks[cam].recv()
+      camera_coroutines.append(cor)
 
-      frames = await asyncio.gather(*camera_coroutines)
-      self._last_recv_time = time.time()
+    frames = await asyncio.gather(*camera_coroutines)
+    self._last_recv_time = time.time()
 
-      return (
-        {cam: frame.to_ndarray(format="rgb24") for cam, frame in zip(self._cameras, frames)},
-        {service: self._message_storage[service] for service in self._requested_services},
-        {service: self._message_validity[service] for service in self._requested_services},
-        {service: self._message_log_mono_times[service] for service in self._requested_services},
-      )
+    return (
+      {cam: frame.to_ndarray(format="rgb24") for cam, frame in zip(self._cameras, frames)},
+      {service: self._message_storage[service] for service in self._requested_services},
+      {service: self._message_validity[service] for service in self._requested_services},
+      {service: self._message_log_mono_times[service] for service in self._requested_services},
+    )
 
   async def _new_message_handler(self, data: bytes):
-    msg = json.loads(data)
-    msg_type, msg_time, msg_valid, msg_data = msg['type'], msg['logMonoTime'], msg['valid'], msg['data']
+    try:
+      msg = json.loads(data)
+      msg_type, msg_time, msg_valid, msg_data = msg['type'], msg['logMonoTime'], msg['valid'], msg['data']
 
-    self._message_storage[msg_type] = msg_data
-    self._message_validity[msg_type] = msg_valid
-    self._message_log_mono_times[msg_type] = msg_time
-    self._message_recv_times[msg_type] = time.time()
+      self._message_storage[msg_type] = msg_data
+      self._message_validity[msg_type] = msg_valid
+      self._message_log_mono_times[msg_type] = msg_time
+      self._message_recv_times[msg_type] = time.time()
+    except Exception as e:
+      print("Error parsing message", e)

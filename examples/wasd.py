@@ -39,7 +39,8 @@ def run_wasd(body_ip, cameras):
     # and other services at obs[service_name]
     # both action and observation spaces can be randomly sampled from:
     # random_action, random_obs = env.action_space.sample(), env.observation_space.sample()
-    obs, _, _, _, info = env.step(action)
+    obs, _, _, _, info = env.step(action) # obs, reward, done, _, info
+    # info contains additional information such as message creation timestamps and validity
     
     # observation dictionary structure is static, which means every field is always present, even if some messages havent been received yet.
     # in that case they will be filled with random values (can be examined if/when received using info["timestamps"][service_name])

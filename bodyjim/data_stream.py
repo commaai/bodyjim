@@ -105,7 +105,7 @@ class DataStreamSession:
     assert self._channel is not None
     msg = {"type": "testJoystick", "data": {"axes": [x, y], "buttons": [False]}}
     data = json.dumps(msg).encode()
-    self._channel.send(data)
+    self._event_loop.call_soon_threadsafe(self._channel.send, data)
 
   async def _connect_async(self):
     await self._stream.start()

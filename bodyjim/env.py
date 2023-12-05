@@ -91,7 +91,7 @@ class BodyEnv(gym.Env):
 
     assert self._data_stream is not None
     x, y = action
-    self._data_stream.send(x, y)
+    self._data_stream.send(float(x), float(y))
     obs, info = self._get_observation_and_info()
     reward = self.reward(self._last_observation, action, obs)
     done = self.is_done(self._last_observation, action, obs)

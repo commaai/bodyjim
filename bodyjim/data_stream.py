@@ -90,10 +90,11 @@ class DataStreamSession:
     assert self._event_loop is not None, "Session not started"
     future = asyncio.run_coroutine_threadsafe(self._disconnect_async(), self._event_loop)
     future.result(CONNECT_TIMEOUT_SECONDS)
-    self._event_loop.stop()
-    self._event_loop.close()
+    # stop() neeed to be called threadsafe
+    self._event_loop.call_soon_threadsafe(self._event_loop.stop)
     self._runner_thread.join()
     self._runner_thread = None
+    self._event_loop.close()
 
   def receive(self) -> Tuple[Dict[str, np.array], Dict[str, Any], Dict[str, Optional[bool]], Dict[str, Optional[int]]]:
     assert self._event_loop is not None, "Session not started"

@@ -11,7 +11,7 @@ import numpy as np
 from teleoprtc import WebRTCOfferBuilder
 
 CONNECT_TIMEOUT_SECONDS = 3.0
-RECEIVE_TIMEOUT_SECONDS = 0.2
+RECEIVE_TIMEOUT_SECONDS = 2.0
 
 
 class WebrtcdClient:

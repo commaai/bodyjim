@@ -126,29 +126,30 @@ class BodyEnv(gym.Env):
       return image
     else:
       black, white = (0, 0, 0), (255, 255, 255)
-      top_margin, text_offset, single_cam_width = 50, 20, 800
+      top_margin, text_offset, single_cam_width = 50, 25, 800
       if self._window is None:
         pygame.init()
         pygame.display.init()
-        scaling_factor = single_cam_width / image.shape[1]
-        desired_camera_width, desired_camera_height = single_cam_width, scaling_factor * image.shape[0]
+        scaling_factor = single_cam_width / (image.shape[1] / len(self._cameras))
+        desired_camera_width, desired_camera_height = single_cam_width * len(self._cameras), scaling_factor * image.shape[0]
         self._window = pygame.display.set_mode((desired_camera_width, desired_camera_height + top_margin))
+        self._image_surface = pygame.Surface((image.shape[1], image.shape[0]))
         self._surface = pygame.Surface((desired_camera_width, desired_camera_height))
 
       width, _ = self._window.get_size()
 
-      font = pygame.font.SysFont("Arial", 16)
+      self._window.fill(black)
+
+      font = pygame.font.SysFont("Arial", 36)
       for i, cam in enumerate(self._cameras):
         text = font.render(f"{cam}", True, white, black)
         text_rect = text.get_rect()
         text_rect.center = (int((i + 0.5)* (width / len(self._cameras))), text_offset)
         self._window.blit(text, text_rect)
 
-      # TODO resize image to desired size
-
-      self._window.fill(black)
-      pygame.surfarray.blit_array(self._surface, image)
-      self._window.blit(self._surface, (0, 0))
+      pygame.surfarray.blit_array(self._image_surface, image.swapaxes(0, 1))
+      pygame.transform.scale(self._image_surface, self._surface.get_size(), dest_surface=self._surface)
+      self._window.blit(self._surface, (0, top_margin))
       pygame.display.flip()
 
   def close(self):

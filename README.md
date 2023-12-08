@@ -2,6 +2,10 @@
 
 [comma body](https://www.comma.ai/shop/body) gymnasium environment API.
 
+<p align="center">
+  <img src="./body_wink.gif" width="800" alt="Winking comma body">
+</p>
+
 ## Installation
 
 To install `bodyjim` run the following command:
@@ -15,7 +19,7 @@ Package requires comma body with comma three/threex running openpilot 0.9.6 or n
 
 Just like other `gymnasium` environments, `bodyjim` is easy to use. Base `BodyEnv` accepts ip address of the body, list of cameras to stream (valid values: `driver` - driver camera, `road` - front camera, `wideRoad` - front wide angle camera) and list of cereal services to stream ([list of services](https://github.com/commaai/cereal/blob/master/services.py)).
 
-Environment's `step` method accepts action in x, y direction coordinates and retrieves observation in form of a dict with camera frames and cereal messages ([structure definitions](https://github.com/commaai/cereal/blob/master/log.capnp)) received so far. Additional info dictionary contains information about message creation timestamps and validity (which are None, if none such message was received yet).
+Environment's `step` method accepts action in x, y direction coordinates and retrieves next observation in form of a dict with latest camera frames and cereal messages ([structure definitions](https://github.com/commaai/cereal/blob/master/log.capnp)) received so far. Additional info dictionary contains information about message creation timestamps and validity (which are None, if they haven't been received yet).
 
 ```py
 from bodyjim import BodyEnv

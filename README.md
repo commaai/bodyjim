@@ -36,7 +36,7 @@ accelerometer, accelerometer_t = obs["accelerometer"], info["times"]["accelerome
 By default body environment always returns reward = 0 and done = False. Subclasses can customize this behavior by overriding `reward ` and `is_done` methods:
 
 ```py
-class CustomBodyEnv(BodyEnv)
+class CustomBodyEnv(BodyEnv):
   def reward(self, obs: Optional[ObsType], action: ActType, next_obs: ObsType) -> float:
     # obs - latest observations, action - most recently executed actions, next_obs - observations after executing such action
     ...

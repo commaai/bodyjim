@@ -28,6 +28,9 @@ body_address = ... # body ip address, pass localhost if running locally on the b
 env = BodyEnv(body_address, ["driver"], ["accelerometer", "gyroscope"], render_mode="human")
 env.reset()
 
+# action coordinates assuming the front is the screen-facing side
+# x-axis: Forward (negative) / Backwards (positive)
+# y-axis: Left (positive) / Right (negative)
 action = (1.0, 0.0) # (x, y)
 obs, reward, done, truncated, info = env.step(action)
 
@@ -37,7 +40,7 @@ driver_image = obs["camera"]["driver"] # nd.ndarray
 accelerometer, accelerometer_t = obs["accelerometer"], info["times"]["accelerometer"]
 ```
 
-By default body environment always returns reward = 0 and done = False. Subclasses can customize this behavior by overriding `reward ` and `is_done` methods:
+By default body environment always returns reward = 0 and done = False. Subclasses can customize this behavior by overriding `reward` and `is_done` methods:
 
 ```py
 class CustomBodyEnv(BodyEnv):
@@ -57,7 +60,7 @@ class CustomBodyEnv(BodyEnv):
 
 ## Examples
 
-Repository comes with few examples, showcasing how to use the api. 
+Repository comes with few examples, showcasing how to use the library. 
 
 To control the body with wasd:
 ```sh

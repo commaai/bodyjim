@@ -24,3 +24,7 @@ jobs:
     - name: Build and publish
       run: |
         bash scripts/publish_pypi.sh "${{ secrets.PYPI_PAT }}"
+    - name: Test package installation
+      run: | 
+        pip install body-jim
+        python -c "from bodyjim import BodyEnv"

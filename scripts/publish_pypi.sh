@@ -9,7 +9,7 @@ fi
 PYPI_TOKEN="$1"
 
 # install required packages
-pip install --upgrade twine
+pip install --upgrade twine build
 
 # build the package
 python3 -m build

@@ -7,7 +7,7 @@ jobs:
   publish_pypi:
     name: "Publish package on PyPI"
     runs-on: ubuntu-20.04
-    if: github.repository == 'commaai/body-jim'
+    if: github.ref == 'refs/heads/master' && github.repository == 'commaai/body-jim'
     steps:
     - uses: actions/checkout@v3
     - uses: actions/setup-python@v2

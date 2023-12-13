@@ -5,10 +5,10 @@ TOML_VERSION="$(python3 -c 'import tomllib; print(tomllib.load(open("pyproject.t
 LATEST_TAG_VERSION="$(git tag --list | sort -V -r | head -n 1)"
 TAGGED_VERSION=""
 
-# if [[ "$BRANCH" != "master" ]]; then
-#   echo "Not on master branch."
-#   exit 1
-# fi
+if [[ "$BRANCH" != "master" ]]; then
+  echo "Not on master branch."
+  exit 1
+fi
 
 if [[ -z "$LATEST_TAG_VERSION" ]] || printf "$LATEST_TAG_VERSION\n$TOML_VERSION" | sort -V -C; then
   TAGGED_VERSION="$TOML_VERSION"

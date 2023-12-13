@@ -10,11 +10,11 @@ if [[ "$BRANCH" != "master" ]]; then
   exit 1
 fi
 
-if [[ -z "$LATEST_TAG_VERSION" ]] || printf "$LATEST_TAG_VERSION\n$TOML_VERSION" | sort -V -C; then
-  TAGGED_VERSION="$TOML_VERSION"
-elif [[ "$TOML_VERSION" == "$LATEST_TAG_VERSION" ]]; then
+if [[ "$TOML_VERSION" == "$LATEST_TAG_VERSION" ]]; then
   TAGGED_VERSION=$(echo "$TOML_VERSION" | python3 -c "v = input().split('.'); v[-1]=str(int(v[-1])+1); print('.'.join(v))")
   sed -i "s/version = \"$TOML_VERSION\"/version = \"$TAGGED_VERSION\"/" pyproject.toml
+elif [[ -z "$LATEST_TAG_VERSION" ]] || printf "$LATEST_TAG_VERSION\n$TOML_VERSION" | sort -V -C; then
+  TAGGED_VERSION="$TOML_VERSION"
 else
   echo "Version in pyproject.toml is lower than the latest tag version."
   exit 1

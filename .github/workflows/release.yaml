@@ -1,21 +1,26 @@
 name: release
 
 on:
-  push:
-    branches:
-      - master
   workflow_dispatch:
 
 jobs:
   publish_pypi:
     name: "Publish package on PyPI"
     runs-on: ubuntu-20.04
-    if: github.ref == 'refs/heads/master' && github.event_name != 'pull_request' && github.repository == 'commaai/body-jim'
+    if: github.repository == 'commaai/body-jim'
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: actions/setup-python@v2
       with:
         python-version: '3.11'
+    - name: Bump version and tag
+      run: |
+        git config --global user.name "Vehicle Researcher"
+        git config --global user.email "user@comma.ai"
+
+        bash scripts/bump_tag.sh
+
+        git push --no-verify --force-with-lease --tags origin master
     - name: Build and publish
       run: |
-        bash release.sh "$PYPI_PAT"
+        bash scripts/publish_pypi.sh "${{ secrets.PYPI_PAT }}"

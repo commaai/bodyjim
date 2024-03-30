@@ -24,7 +24,7 @@ Environment's `step` method accepts action in x, y direction coordinates and ret
 ```py
 from bodyjim import BodyEnv
 
-body_address = ... # body ip address, pass localhost if running locally on the body 
+body_address = ... # body ip address, pass localhost if running locally on the body
 env = BodyEnv(body_address, ["driver"], ["accelerometer", "gyroscope"], render_mode="human")
 env.reset()
 
@@ -51,7 +51,7 @@ class CustomBodyEnv(BodyEnv):
   def is_done(self, obs: Optional[ObsType], action: ActType, next_obs: ObsType) -> bool:
     # same as for reward
     ...
-``` 
+```
 
 `BodyEnv` supports two rendering modes for visualization purposes:
 * `rgb_array` - returns image formed by horizontally stacking frames from each requested camera
@@ -60,7 +60,13 @@ class CustomBodyEnv(BodyEnv):
 
 ## Examples
 
-Repository comes with few examples, showcasing how to use the library. 
+Repository comes with few examples, showcasing how to use the library.
+
+Examples require additional dependencies, which can be installed using:
+
+```sh
+pip install bodyjim[examples]
+```
 
 To control the body with wasd:
 ```sh

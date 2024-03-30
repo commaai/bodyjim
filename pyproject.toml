@@ -26,7 +26,12 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-  "pre-commit"
+  "pre-commit",
+]
+examples = [
+  "opencv-python",
+  "onnx",
+  "onnxruntime",
 ]
 
 [project.urls]

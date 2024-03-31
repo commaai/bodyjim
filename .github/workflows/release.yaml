@@ -10,6 +10,8 @@ jobs:
     if: github.ref == 'refs/heads/master' && github.repository == 'commaai/body-jim'
     steps:
     - uses: actions/checkout@v3
+      with:
+        fetch-tags: true
     - uses: actions/setup-python@v2
       with:
         python-version: '3.11'
@@ -25,6 +27,6 @@ jobs:
       run: |
         bash scripts/publish_pypi.sh "${{ secrets.PYPI_PAT }}"
     - name: Test package installation
-      run: | 
+      run: |
         pip install bodyjim
         python -c "from bodyjim import BodyEnv"

@@ -124,8 +124,8 @@ def roam(body_ip):
         return
 
     action, _ = runner.run(obs["cameras"]["driver"], obs["carState"]["wheelSpeeds"])
-
     obs, _, _, _, _ = env.step(wasd_to_xy(action))
+    overlay_wasd(env.unwrapped._last_observation["cameras"]["driver"], action)
 
 
 class SkipFrame(gym.Wrapper):
@@ -168,6 +168,34 @@ class LagTracker(gym.Wrapper):
     ):
     self.last = None
     return self.env.reset(seed=seed, options=options)
+
+
+def overlay_wasd(image, wasd_tokens, position=(100, 200), font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=8, color=(255, 127, 14), thickness=10):
+    sizes = {}
+    for c in [' ', 'W', 'A', 'S', 'D']:
+      w, h = cv2.getTextSize(c, font, font_scale, thickness)[0]
+      sizes[c] = {"width": w, "height": h}
+    
+    ws_token_to_char = {0: 'W', 2: 'S', 1: None}
+    ad_token_to_char = {2: 'A', 0: 'D', 1: None}
+    
+    interline_margin = 5
+    positions = {} # compute where to draw each letter
+    asd_position = (position[0], position[1] + sizes["W"]["height"] + interline_margin)
+    positions["W"] = (position[0] + sizes[" "]["width"], position[1])
+    positions["A"] = (asd_position[0], asd_position[1])
+    positions["S"] = (positions["A"][0] + sizes["A"]["width"], asd_position[1])
+    positions["D"] = (positions["S"][0] + sizes["S"]["width"], asd_position[1])
+
+    for c in ['W', 'A', 'S', 'D']: # overlay wasd in white
+      image = cv2.putText(image, c, positions[c], font, font_scale, (255, 255, 255), thickness)
+
+    char_to_print = [ws_token_to_char[wasd_tokens[0]], ad_token_to_char[wasd_tokens[1]]] # overlay pressed letter in {color}
+    for c in char_to_print:
+      if c is not None:
+        image = cv2.putText(image, c, positions[c], font, font_scale, color, thickness)
+
+    return image
 
 
 if __name__=="__main__":

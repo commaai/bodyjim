@@ -6,7 +6,6 @@ from typing import Optional
 
 import cv2
 import numpy as np
-import onnx
 import pygame
 import onnxruntime as ort
 import gymnasium as gym

@@ -2,24 +2,25 @@
 import argparse
 import os
 from pathlib import Path
-from typing import Optional
+from dataclasses import dataclass
 
 import cv2
 import numpy as np
 import pygame
 import onnxruntime as ort
-import gymnasium as gym
-import time
 
 from bodyjim import BodyEnv
+from bodyjim.wrappers import SkipFrame, LagTracker
 
 
-MAX_SPEED = 0.8 # adjust between 0.0 and 1.0
-USE_ACTION_T = 2
+@dataclass
+class Config:
+  max_speed: float = 1.0 # adjust between 0.0 and 1.0
+  use_action_t: int = 2 # 0-15
+
 
 GPT_PATH = Path(__file__).parent / 'gpt2.onnx'
 TOKENIZER_PATH = Path(__file__).parent / 'encoder.onnx'
-
 INPUT_SHAPE = (256, 160)
 FRAME_TOKENS = 163
 FPS = 5 # model has been trained at 5 fps
@@ -30,36 +31,9 @@ WHEEL_SPEEDS_VOCAB_SIZE = 512
 WHEEL_SPEED_BINS = np.linspace(WHEEL_SPEEDS_RANGE[0], WHEEL_SPEEDS_RANGE[1], WHEEL_SPEEDS_VOCAB_SIZE)
 
 
-def tokenize_wheel_speed(speed):
-  speed = np.clip(speed, WHEEL_SPEEDS_RANGE[0], WHEEL_SPEEDS_RANGE[1])
-  return np.digitize(speed, WHEEL_SPEED_BINS, right=True)
-
-
-def detokenize_actions(actions):
-  actions = np.clip(actions, 0, 9 - 1)
-  ad, ws = np.divmod(actions, 3)
-  return np.concatenate([ws, ad], axis=-1)
-
-
-def wasd_to_xy(wasd):
-  ws, ad = wasd[0], wasd[1]
-
-  action = [0.0, 0.0]
-  if ws == 0: # W
-    action[0] += -1.0 * MAX_SPEED
-  elif ws == 2: # S
-    action[0] += 1.0 * MAX_SPEED
-
-  if ad == 2: # A
-    action[1] += 1 * MAX_SPEED
-  elif ad == 0: # D
-    action[1] += -1 * MAX_SPEED
-
-  return action
-
-
 class GPTRunner:
-  def __init__(self):
+  def __init__(self, config: Config = Config()):
+    self.config = config
     if not GPT_PATH.exists():
       print("Downloading GPT model...")
       os.system(f'wget -P {GPT_PATH.parent} {"https://huggingface.co/commaai/commabody-gpt2/resolve/main/gpt2.onnx"}')
@@ -84,10 +58,35 @@ class GPTRunner:
     img_tokens = self.tokenizer_session.run(None, {'img': img})[0].reshape(1, -1)
     return img_tokens
 
+  def tokenize_wheel_speed(self, speed):
+    speed = np.clip(speed, WHEEL_SPEEDS_RANGE[0], WHEEL_SPEEDS_RANGE[1])
+    return np.digitize(speed, WHEEL_SPEED_BINS, right=True)
+
+  def detokenize_actions(self, actions):
+    actions = np.clip(actions, 0, 9 - 1)
+    ad, ws = np.divmod(actions, 3)
+    return np.concatenate([ws, ad], axis=-1)
+
+  def wasd_to_xy(self, wasd):
+    ws, ad = wasd[0], wasd[1]
+
+    action = [0.0, 0.0]
+    if ws == 0: # W
+      action[0] += -1.0 * self.config.max_speed
+    elif ws == 2: # S
+      action[0] += 1.0 * self.config.max_speed
+
+    if ad == 2: # A
+      action[1] += 1 * self.config.max_speed
+    elif ad == 0: # D
+      action[1] += -1 * self.config.max_speed
+
+    return action
+
   def run(self, img: np.ndarray, wheel_speeds: dict):
     img_tokens = self.tokenize_frame(img)
     wheel_speeds = np.array([wheel_speeds["fl"], wheel_speeds["fr"]])
-    wheel_speeds_tokens = np.expand_dims(tokenize_wheel_speed(wheel_speeds), 0)
+    wheel_speeds_tokens = np.expand_dims(self.tokenize_wheel_speed(wheel_speeds), 0)
 
     tokens = np.concatenate([img_tokens, wheel_speeds_tokens], axis=1)
 
@@ -97,17 +96,18 @@ class GPTRunner:
     # run GPT model, get action plan
     plan_probs = self.gpt_session.run(None, {'tokens': self.context})[1].reshape(16, 9) # 16 actions
     plan = np.argmax(plan_probs, axis=1).reshape(-1, 1)
-    action = plan[USE_ACTION_T]
+    action = plan[self.config.use_action_t]
     self.last_action = action.reshape(1, 1)
 
-    plan = detokenize_actions(plan)
+    plan = self.detokenize_actions(plan)
 
-    return plan[USE_ACTION_T], plan
+    return plan[self.config.use_action_t], plan
 
 
 def roam(body_ip):
   env = BodyEnv(body_ip, ["driver"], ["carState"], render_mode="human")
-  env = LagTracker(SkipFrame(env, control_freq=FPS), control_freq=FPS)
+  n_skip_frames = int(CAMERA_FPS / FPS)
+  env = LagTracker(SkipFrame(env, n=n_skip_frames), control_freq=FPS)
   obs, _ = env.reset()
 
   print("Loading model...")
@@ -123,50 +123,8 @@ def roam(body_ip):
         return
 
     action, _ = runner.run(obs["cameras"]["driver"], obs["carState"]["wheelSpeeds"])
-    obs, _, _, _, _ = env.step(wasd_to_xy(action))
+    obs, _, _, _, _ = env.step(runner.wasd_to_xy(action))
     overlay_wasd(env.unwrapped._last_observation["cameras"]["driver"], action)
-
-
-class SkipFrame(gym.Wrapper):
-  def __init__(self, env, control_freq: int):
-    super().__init__(env)
-    self.n = int(CAMERA_FPS / control_freq)
-    print(f"Skipping {self.n} frames per action")
-
-  def step(self, action):
-    for _ in range(self.n):
-      obs, reward, terminated, truncated, info = self.env.step(action)
-
-    return obs, reward, terminated, truncated, info
-
-
-class LagTracker(gym.Wrapper):
-  """make sure the model is running fast enough"""
-
-  def __init__(self, env, control_freq: int):
-    super().__init__(env)
-    self.dt = 1/control_freq
-
-  def step(self, action):
-    current = time.time()
-    loop_time = 0
-    if self.last is not None:
-      loop_time = current - self.last
-      if loop_time > self.dt:
-        print(f"warning, lagging, max freq {1/loop_time} Hz, expected {1/self.dt} Hz")
-
-    obs, reward, terminated, truncated, info = self.env.step(action)
-    self.last = time.time()
-
-    return obs, reward, terminated, truncated, info
-
-  def reset(
-      self,
-      seed: Optional[int] = None,
-      options: Optional[dict] = None,
-    ):
-    self.last = None
-    return self.env.reset(seed=seed, options=options)
 
 
 def overlay_wasd(image, wasd_tokens, position=(100, 200), font=cv2.FONT_HERSHEY_SIMPLEX, font_scale=8, color=(255, 127, 14), thickness=10):

@@ -62,7 +62,7 @@ class CustomBodyEnv(BodyEnv):
 
 Repository comes with few examples, showcasing how to use the library.
 
-Examples require additional dependencies, which can be installed using:
+They are meant to be ran remotely (not from the body C3/C3X itself) and require additional dependencies, which can be installed using:
 
 ```sh
 pip install bodyjim[examples]

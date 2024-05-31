@@ -82,3 +82,8 @@ To try follow person mode, which uses YOLOv5 to detect and follow the tallest pe
 ```sh
 python3 examples/follow_human.py body_ip_address
 ```
+
+To have the body roam around using our GPT policy (GPU required):
+```sh
+python3 examples/roam.py body_ip_address
+```

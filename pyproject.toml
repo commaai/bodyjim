@@ -32,7 +32,9 @@ examples = [
   "opencv-python",
   "onnx",
   "onnxruntime",
+  "onnxruntime-gpu"
 ]
+
 
 [project.urls]
 "Homepage" = "https://github.com/commaai/body-jim"

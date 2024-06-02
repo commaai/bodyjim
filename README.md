@@ -62,7 +62,7 @@ class CustomBodyEnv(BodyEnv):
 
 Repository comes with few examples, showcasing how to use the library.
 
-Examples require additional dependencies, which can be installed using:
+You can use the body-jim library either on the body itself or from a remote computer. These examples are meant to be ran remotely and require additional dependencies, which can be installed using:
 
 ```sh
 pip install bodyjim[examples]
@@ -81,4 +81,9 @@ python3 examples/random_walk.py body_ip_address [CAMERA...]
 To try follow person mode, which uses YOLOv5 to detect and follow the tallest person in the frame:
 ```sh
 python3 examples/follow_human.py body_ip_address
+```
+
+To have the body roam around using our GPT policy (GPU required):
+```sh
+python3 examples/roam.py body_ip_address
 ```

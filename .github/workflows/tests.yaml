@@ -3,12 +3,27 @@ name: tests
 on: [push, pull_request]
 
 jobs:
+  fetch-versions:
+    runs-on: ubuntu-20.04
+    steps:
+        - id: filter-versions
+          run: |
+            API_RESPONSE=$(curl -s https://endoflife.date/api/python.json)
+
+            # Filter versions based on EOL date and format output as JSON array
+            FILTERED_VERSIONS=$(echo $API_RESPONSE | jq -c '[.[] | select(.eol > "'$(date +"%Y-%m-%d")'") | .cycle]')
+
+            echo "versions=$FILTERED_VERSIONS" >> $GITHUB_OUTPUT
+    outputs:
+      versions: ${{ steps.filter-versions.outputs.versions }}
+
   test:
     runs-on: ubuntu-20.04
+    needs: fetch-versions
     strategy:
       fail-fast: false
       matrix:
-        python-version: ["3.8", "3.9", "3.10", "3.11", "3.12"]
+        python-version: ${{ fromJson(needs.fetch-versions.outputs.versions) }}
     steps:
     - uses: actions/checkout@v4
     - uses: actions/setup-python@v5

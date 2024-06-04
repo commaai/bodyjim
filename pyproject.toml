@@ -37,5 +37,5 @@ examples = [
 
 
 [project.urls]
-"Homepage" = "https://github.com/commaai/body-jim"
-"Bug Tracker" = "https://github.com/commaai/body-jim/issues"
+"Homepage" = "https://github.com/commaai/bodyjim"
+"Bug Tracker" = "https://github.com/commaai/bodyjim/issues"

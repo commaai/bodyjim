@@ -62,7 +62,7 @@ class CustomBodyEnv(BodyEnv):
 
 Repository comes with few examples, showcasing how to use the library.
 
-You can use the body-jim library either on the body itself or from a remote computer. These examples are meant to be ran remotely and require additional dependencies, which can be installed using:
+You can use the bodyjim library either on the body itself or from a remote computer. These examples are meant to be ran remotely and require additional dependencies, which can be installed using:
 
 ```sh
 pip install bodyjim[examples]

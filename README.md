@@ -87,3 +87,4 @@ To have the body roam around using our GPT policy (GPU required):
 ```sh
 python3 examples/roam.py body_ip_address
 ```
+> pip install bodyjim[examples] will install `onnxruntime-gpu` which uses cuda 11.x by default. If you run cuda 12.x [see this](https://onnxruntime.ai/docs/install/#install-onnx-runtime-gpu-cuda-12x).

@@ -2,7 +2,7 @@
 import cv2
 import numpy as np
 import ast
-import os
+import urllib.request
 import argparse
 import onnx
 from pathlib import Path
@@ -86,7 +86,7 @@ class YoloRunner:
     onnx_path = MODEL_PATH
     if not onnx_path.exists():
       yolo_url = 'https://github.com/YassineYousfi/yolov5n.onnx/releases/download/yolov5n.onnx/yolov5n_flat.onnx'
-      os.system(f'wget -P {onnx_path.parent} {yolo_url}')
+      urllib.request.urlretrieve(yolo_url, onnx_path)
 
     model = onnx.load(onnx_path)
     class_names_dict = ast.literal_eval(model.metadata_props[0].value)
@@ -157,7 +157,7 @@ def run_follow_human(body_ip):
     action = [0.0, 0.0]
     if index_to_follow is not None:
       person = outputs[index_to_follow]
-      pt1, pt2 = person["pt1"], person["pt2"]     
+      pt1, pt2 = person["pt1"], person["pt2"]
       center_x, width = pt1[0] + (pt2[0] - pt1[0]) / 2, abs(pt1[0] - pt2[0])
       center_frac, width_frac = center_x / INPUT_SHAPE[0], width / INPUT_SHAPE[0]
       if width_frac < WIDTH_THRESHOLD:
@@ -169,7 +169,7 @@ def run_follow_human(body_ip):
             action = [0.0, 1.0]
           else:
             action = [0.0, -1.0]
-    
+
     print("Executing action:", action)
     obs, _, _, _, _ = env.step(action)
 

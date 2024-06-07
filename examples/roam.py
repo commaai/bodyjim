@@ -1,8 +1,8 @@
 #!/usr/bin/env python3
 import argparse
-import os
 from pathlib import Path
 from dataclasses import dataclass
+import urllib.request
 
 import cv2
 import numpy as np
@@ -36,11 +36,11 @@ class GPTRunner:
     self.config = config
     if not GPT_PATH.exists():
       print("Downloading GPT model...")
-      os.system(f'wget -P {GPT_PATH.parent} {"https://huggingface.co/commaai/commabody-gpt2/resolve/main/gpt2.onnx"}')
+      urllib.request.urlretrieve("https://huggingface.co/commaai/commabody-gpt2/resolve/main/gpt2.onnx", GPT_PATH)
 
     if not TOKENIZER_PATH.exists():
       print("Downloading tokenizer...")
-      os.system(f'wget -P {TOKENIZER_PATH.parent} {"https://huggingface.co/commaai/commabody-gpt2/resolve/main/encoder.onnx"}')
+      urllib.request.urlretrieve("https://huggingface.co/commaai/commabody-gpt2/resolve/main/encoder.onnx", TOKENIZER_PATH)
 
     options = ort.SessionOptions()
     self.tokenizer_session = ort.InferenceSession(TOKENIZER_PATH, options, ['CUDAExecutionProvider'])
@@ -132,10 +132,10 @@ def overlay_wasd(image, wasd_tokens, position=(100, 200), font=cv2.FONT_HERSHEY_
     for c in [' ', 'W', 'A', 'S', 'D']:
       w, h = cv2.getTextSize(c, font, font_scale, thickness)[0]
       sizes[c] = {"width": w, "height": h}
-    
+
     ws_token_to_char = {0: 'W', 2: 'S', 1: None}
     ad_token_to_char = {2: 'A', 0: 'D', 1: None}
-    
+
     interline_margin = 5
     positions = {} # compute where to draw each letter
     asd_position = (position[0], position[1] + sizes["W"]["height"] + interline_margin)
